@@ -1,2 +1,159 @@
-empty
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /><meta name="author" content="Cédric Champeau (@CedricChampeau), Gradle Inc." /><title>Extremely fast builds with Gradle 3</title><meta content="yes" name="apple-mobile-web-app-capable" /><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style" /><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui" name="viewport" /><link href="reveal.js/css/reveal.css" rel="stylesheet" /><link rel="stylesheet" href="reveal.js/css/theme/summit.css" id="theme" /><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.3.0/css/font-awesome.min.css" /><link href="reveal.js/lib/css/zenburn.css" rel="stylesheet" /><script>document.write( '<link rel="stylesheet" href="reveal.js/css/print/' + ( window.location.search.match( /print-pdf/gi ) ? 'pdf' : 'paper' ) + '.css" type="text/css" media="print">' );</script><link rel="stylesheet" type="text/css" href="reveal.js/css/theme/asciinema-player.css" />
+<link rel="stylesheet" type="text/css" href="reveal.js/css/theme/github-gist.css" />
+<script src="reveal.js/css/theme/asciinema-player.js"></script></head><body><div class="reveal"><div class="slides"><section class="title"><div id="front-top">FinistJUG</div><div id="front-title">Extremely fast builds with Gradle 3 <br> Cédric Champeau</div><div id="front-date">2016</div></section><section id="ho-am-i" data-background-image="./images/nantes.jpg" data-background-size="cover"><h2>Who am I</h2>
+<style>
+.asciinema-terminal.font-medium {
+  font-size: 16px;
+}
+</style>
 
+<div class="pictureWrapper">
+   <div class="picture"><img src="images/mini-me.png"></div>
+</div>
+<div class="listingblock"><div class="content"><pre class="highlight"><code class="groovy language-groovy">speaker {
+    name 'Cédric Champeau'
+    company 'Gradle Inc'
+    oss 'Apache Groovy committer',
+    successes 'Static type checker',
+                    'Static compilation',
+                    'Traits',
+                    'Markup template engine',
+                    'DSLs'
+        failures Stream.of(bugs),
+        twitter '@CedricChampeau',
+        github 'melix',
+        extraDescription '''Groovy in Action 2 co-author
+Misc OSS contribs (Gradle plugins, deck2pdf, jlangdetect, ...)'''
+}</code></pre></div></div></section>
+<section id="genda"><h2>Agenda</h2><div class="ulist"><ul><li><p>The Gradle Daemon</p></li><li><p>Profiling</p></li><li><p>Incremental builds</p></li><li><p>Incremental compilation</p></li><li><p>Continuous builds</p></li><li><p>Composite builds</p></li><li><p>Task output cache</p></li></ul></div></section>
+<section id="hat-is-gradle"><h2>What is Gradle?</h2><div class="ulist"><ul><li><p>A build tool</p></li><li><p>Cloud Services</p></li></ul></div></section>
+<section id="he-gradle-daemon"><h2>The Gradle daemon</h2><div class="ulist"><ul><li><p>Long-lived background process</p></li><li><p>Listens and executes build actions</p></li><li><p>Faster startup / execution</p></li><li><p>Enabled by default since 3.0</p></li></ul></div></section>
+<section><section id="he-gradle-daemon-2"><h2>The Gradle daemon</h2></section><section id="old-daemon"><h2>Cold daemon</h2><div class="imageblock" style=""><img src="./images/daemon-keynote-cold.gif" alt="daemon keynote cold" /></div></section><section id="arm-daemon"><h2>Warm daemon</h2><div class="imageblock" style=""><img src="./images/daemon-keynote-warm.gif" alt="daemon keynote warm" /></div></section></section>
+<section id="rofiling-a-build"><h2>Profiling a build</h2><div class="paragraph"><p><code>gradle --profile</code></p></div>
+<div class="ulist"><ul><li><p>Generates a report in the build directory</p></li><li><p>Limited insight</p></li><li><p>Not easily shareable</p></li><li><p>But can already give precious information</p></li></ul></div></section>
+<section id="uild-scans"><h2>Build scans</h2><table class="tableblock frame-all grid-all" style="width:100%"><colgroup><col style="width:50%" /><col style="width:50%" /></colgroup><tbody><tr><td class="tableblock halign-left valign-top"><div><div class="ulist"><ul><li><p>First member of the Cloud Services family</p></li><li><p>Insights into your build</p></li><li><p>View and share via URL</p></li><li><p>Debug, optimize and refine</p></li><li><p>Analyze <em>all</em> of your builds</p></li><li><p>Available for free</p></li></ul></div></div></td><td class="tableblock halign-left valign-top"><div><div class="paragraph"><p><span class="image"><img src="./images/build-scans.png" alt="build scans" /></span></p></div></div></td></tr></tbody></table></section>
+<section id="uild-scan-demo"><h2>Build scan demo</h2><div class="paragraph"><p><a href="https://scans.gradle.com/s/sample/groovy" class="bare">https://scans.gradle.com/s/sample/groovy</a></p></div></section>
+<section><section id="reating-a-build-scan"><h2>Creating a build scan</h2></section><section id="pply-the-build-scan-plugin"><h2>Apply the build scan plugin</h2><div class="listingblock"><div class="content"><pre class="highlight"><code class="groovy language-groovy">plugins {
+    id 'com.gradle.build-scan' version '1.0'
+}
+
+buildScan {
+    licenseAgreementUrl = 'https://gradle.com/terms-of-service'
+    licenseAgree = 'yes'
+}</code></pre></div></div></section><section id="un-the-build"><h2>Run the build</h2><div class="listingblock"><div class="content"><pre class="highlight"><code>./gradlew -Dscan build</code></pre></div></div></section><section id="lick-on-the-link"><h2>Click on the link</h2><div class="listingblock"><div class="content"><pre class="highlight"><code>:jrubyPrepareGems
+:asciidoctor UP-TO-DATE
+
+BUILD SUCCESSFUL
+
+Total time: 1.132 secs
+
+Publishing build information...
+https://gradle.com/s/v2f5knnujnsx2</code></pre></div></div></section></section>
+<section><section id="ncremental-builds"><h2>Incremental builds</h2><div class="ulist"><ul><li><p>Gradle is meant for incremental builds</p></li><li><p><code>clean</code> is a waste of time</p></li><li><p>Prepare your builds for incrementalness</p></li></ul></div></section><section id="xample-building-a-shaded-jar"><h2>Example: building a shaded jar</h2><div class="listingblock"><div class="content"><pre class="highlight"><code class="groovy language-groovy">task shadedJar(type: ShadedJar) {
+   jarFile = file("$buildDir/libs/shaded.jar")
+   classpath = configurations.runtime
+   mapping = ['org.apache': 'shaded.org.apache']
+}</code></pre></div></div>
+<div class="ulist"><ul><li><p>What are the task inputs?</p></li><li><p>What are the task outputs?</p></li><li><p>What if one of them changes?</p></li></ul></div></section><section id="eclaring-inputs"><h2>Declaring inputs</h2><div class="listingblock"><div class="content"><pre class="highlight"><code class="groovy language-groovy">@InputFiles
+FileCollection getClasspath() { ... }
+
+@Input
+Map&lt;String, String&gt; getMapping() { ... }</code></pre></div></div></section><section id="eclaring-outputs"><h2>Declaring outputs</h2><div class="listingblock"><div class="content"><pre class="highlight"><code class="groovy language-groovy">@OutputFile
+File getJarFile() { ... }</code></pre></div></div></section></section>
+<section><section id="ncremental-compilation"><h2>Incremental compilation</h2><div class="ulist"><ul><li><p>Given a set of source files</p></li><li><p>Only compile the files which have changed&#8230;&#8203;</p></li><li><p>and their dependencies</p></li><li><p>Language specific</p></li></ul></div></section><section id="radle-has-support-for-incremental-compilation-of-java"><h2>Gradle has support for incremental compilation of Java</h2><div class="listingblock"><div class="content"><pre class="highlight"><code>compileJava {
+    //enable incremental compilation
+    options.incremental = true
+}</code></pre></div></div></section></section>
+<section id="ontinuous-builds"><h2>Continuous builds</h2><div class="ulist"><ul><li><p>Gradle watches for changes in task inputs</p></li><li><p>Re-executes tasks as changes occur</p></li><li><p>Enabled with <code>-t</code></p></li></ul></div>
+<div class="listingblock"><div class="content"><pre class="highlight"><code>gradle -t asciidoctor</code></pre></div></div></section>
+<section id="omposite-builds"><h2>Composite builds</h2><div class="ulist"><ul><li><p><em>Compose</em> various projects as if there were one</p><div class="ulist"><ul><li><p>Each project can live in its own repository</p></li><li><p>Each project has its own Gradle build</p></li><li><p>Composition unites them through <em>dependency resolution</em></p></li></ul></div></li><li><p><em>Split</em> monolithic projects</p><div class="ulist"><ul><li><p>For large multiproject builds, allows splitting them into several pieces</p></li><li><p>Each piece can be versioned independently</p></li><li><p>Developers can <em>choose</em> what subprojects they care about</p></li></ul></div></li></ul></div></section>
+<section id="omposite-builds-demo"><h2>Composite builds demo</h2></section>
+<section id="ask-output-cache"><h2>Task output cache</h2><div class="ulist"><ul><li><p>Avoid doing work even after <em>clean</em></p></li><li><p>Share binaries between projects on a single machine</p></li><li><p>Share binaries between projects on a network</p></li><li><p>Backend agnostic</p></li></ul></div></section>
+<section id="ask-output-cache-use-cases"><h2>Task output cache use cases</h2><div class="ulist"><ul><li><p>Long compile tasks</p></li><li><p>Bisecting</p></li><li><p>Continuous integration</p></li><li><p>Green earth</p></li></ul></div></section>
+<section id="ask-output-cache-demo"><h2>Task output cache demo</h2><div class="paragraph"><p>With composite builds!</p></div></section>
+<section id="erformance-guide"><h2>Performance guide</h2><div class="paragraph"><p><a href="https://gradle.github.io/performance-guide/" class="bare">https://gradle.github.io/performance-guide/</a></p></div>
+<div class="imageblock" style=""><img src="./images/gradle-vs-maven-clean-build.png" alt="gradle vs maven clean build" /></div></section>
+<section id="hank-you"><h2>Thank you!</h2><div class="ulist"><ul><li><p>Slides and code : <a href="https://github.com/melix/finistjug-fast-builds" class="bare">https://github.com/melix/finistjug-fast-builds</a></p></li><li><p>Gradle documentation : <a href="http://gradle.org/documentation/" class="bare">http://gradle.org/documentation/</a></p></li><li><p>Follow me: <a href="http://twitter.com/CedricChampeau">@CedricChampeau</a></p></li></ul></div>
+<div class="paragraph"><p>Learn more at <a href="https://gradle.org">www.gradle.org</a></p></div></section></div></div><script src="reveal.js/lib/js/head.min.js"></script><script src="reveal.js/js/reveal.js"></script><script>// See https://github.com/hakimel/reveal.js#configuration for a full list of configuration options
+Reveal.initialize({
+  // Display controls in the bottom right corner
+  controls: true,
+  // Display a presentation progress bar
+  progress: true,
+  // Display the page number of the current slide
+  slideNumber: true,
+  // Push each slide change to the browser history
+  history: true,
+  // Enable keyboard shortcuts for navigation
+  keyboard: true,
+  // Enable the slide overview mode
+  overview: true,
+  // Vertical centering of slides
+  center: true,
+  // Enables touch navigation on devices with touch input
+  touch: true,
+  // Loop the presentation
+  loop: false,
+  // Change the presentation direction to be RTL
+  rtl: false,
+  // Turns fragments on and off globally
+  fragments: true,
+  // Flags if the presentation is running in an embedded mode,
+  // i.e. contained within a limited portion of the screen
+  embedded: false,
+  // Number of milliseconds between automatically proceeding to the
+  // next slide, disabled when set to 0, this value can be overwritten
+  // by using a data-autoslide attribute on your slides
+  autoSlide: 0,
+  // Stop auto-sliding after user input
+  autoSlideStoppable: true,
+  // Enable slide navigation via mouse wheel
+  mouseWheel: false,
+  // Hides the address bar on mobile devices
+  hideAddressBar: true,
+  // Opens links in an iframe preview overlay
+  previewLinks: false,
+  // Theme (e.g., beige, black, league, night, serif, simple, sky, solarized, white)
+  // NOTE setting the theme in the config no longer works in reveal.js 3.x
+  //theme: Reveal.getQueryHash().theme || 'summit',
+  // Transition style (e.g., none, fade, slide, convex, concave, zoom)
+  transition: Reveal.getQueryHash().transition || 'linear',
+  // Transition speed (e.g., default, fast, slow)
+  transitionSpeed: 'default',
+  // Transition style for full page slide backgrounds (e.g., none, fade, slide, convex, concave, zoom)
+  backgroundTransition: 'fade',
+  // Number of slides away from the current that are visible
+  viewDistance: 3,
+  // Parallax background image (e.g., "'https://s3.amazonaws.com/hakim-static/reveal-js/reveal-parallax-1.jpg'")
+  parallaxBackgroundImage: '',
+  // Parallax background size in CSS syntax (e.g., "2100px 900px")
+  parallaxBackgroundSize: '',
+
+  // The "normal" size of the presentation, aspect ratio will be preserved
+  // when the presentation is scaled to fit different resolutions. Can be
+  // specified using percentage units.
+  width: 960,
+  height: 700,
+
+  // Factor of the display size that should remain empty around the content
+  margin: 0.1,
+
+  // Bounds for smallest/largest possible scale to apply to content
+  minScale: 0.2,
+  maxScale: 1.5,
+
+  // Optional libraries used to extend on reveal.js
+  dependencies: [
+      { src: 'reveal.js/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+      { src: 'reveal.js/plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'reveal.js/plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+      { src: 'reveal.js/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+      { src: 'reveal.js/plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+      { src: 'reveal.js/plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+  ]
+});</script><div id="footer">
+  <div style="width:100%">
+     <div style="display:inline">Extremely fast builds with Gradle 3 - @CedricChampeau</div>
+     <div style="display:inline; position:absolute; right: 50px;"><img src="images/gradle-logo-min.png"></div>
+  </div>
+</div></body></html>
